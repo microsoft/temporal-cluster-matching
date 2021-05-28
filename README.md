@@ -19,7 +19,7 @@ If you make use of this implementation in your own project or want to refer to i
 **NOTE: The implementation of the dataloader for the solar farms experiment (`temporal_cluster_matching.DataInferface.S2DataLoader`) will not work until we host the preprocessed Sentinel 2 data -- coming soon!**
 
 <p align="center">
-    <img src="images/data_examples.png" width="430"/>
+    <img src="images/data_examples.png" width="800"/>
 </p>
 
 
