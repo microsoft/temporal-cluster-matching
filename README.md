@@ -8,15 +8,13 @@ For a quick overview of the functionality implemented in this repo, see [noteboo
 
 If you make use of this implementation in your own project or want to refer to it in a scientific publication, **please consider referencing this GitHub repository and citing our [paper](https://arxiv.org/pdf/2103.09787.pdf)**:
 ```
-@Article{robinsonTemporal2021,
+@inproceedings{robinsonTemporal2021,
   author  = {Caleb Robinson and Anthony Ortiz and Juan M. Lavista Ferres and Brandon Anderson and Daniel E. Ho},
   title   = {Temporal Cluster Matching for Change Detection of Structures from Satellite Imagery},
   year    = {2021},
-  journal = {arXiv:2103.09787}
+  booktitle={Proceedings of the 4th ACM SIGCAS Conference on Computing and Sustainable Societies},
 }
 ```
-
-**NOTE: The implementation of the dataloader for the solar farms experiment (`temporal_cluster_matching.DataInferface.S2DataLoader`) will not work until we host the preprocessed Sentinel 2 data -- coming soon!**
 
 <p align="center">
     <img src="images/data_examples.png" width="800"/>
