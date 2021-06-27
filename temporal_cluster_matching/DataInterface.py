@@ -228,10 +228,13 @@ class S2DataLoader(AbstractDataLoader):
     years = [
         2016, 2017, 2018, 2019, 2020
     ]
-    urls = [] #TODO: Add in URLs to S2 COGs
-
-    def __init__(self):
-        raise NotImplementedError("The S2DataLoader will not work until we populate `S2DataLoader.urls` list with the S2 imagery we use.") #TODO: Remove this once URLs are added
+    urls = [
+        "https://researchlabwuopendata.blob.core.windows.net/sentinel-2-imagery/karnataka_change/2016/2016_merged.tif",
+        "https://researchlabwuopendata.blob.core.windows.net/sentinel-2-imagery/karnataka_change/2017/2017_merged.tif",
+        "https://researchlabwuopendata.blob.core.windows.net/sentinel-2-imagery/karnataka_change/2018/2018_merged.tif",
+        "https://researchlabwuopendata.blob.core.windows.net/sentinel-2-imagery/karnataka_change/2019/2019_merged.tif",
+        "https://researchlabwuopendata.blob.core.windows.net/sentinel-2-imagery/karnataka_change/2020/2020_merged.tif",
+    ]
 
     def get_dates_from_geom(self, geom):
         return list(S2DataLoader.years)
