@@ -19,3 +19,4 @@ dependencies:
   - pip:
     - utm==0.7.0
     - pigeon-jupyter==0.1.0
+    - pandas
