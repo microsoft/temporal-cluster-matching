@@ -28,6 +28,7 @@ def calculate_change_values(images, masks, n_clusters, num_samples_for_kmeans=10
         h,w,c = image.shape
         assert mask.shape[0] == h and mask.shape[1] == w
 
+        mask = mask.astype(bool)
 
         # fit a k-means model and use it to cluster the image
         if use_minibatch:
@@ -56,8 +57,8 @@ def calculate_change_values(images, masks, n_clusters, num_samples_for_kmeans=10
 
         if parcel_labels.shape[0] > 0:
             # normalize each vector of cluster index counts into discrete distributions
-            parcel_distribution = parcel_counts / parcel_counts.sum()
-            neighborhood_distribution = neighborhood_counts / neighborhood_counts.sum()
+            parcel_distribution = (parcel_counts + 1e-5) / parcel_counts.sum()
+            neighborhood_distribution = (neighborhood_counts + 1e-5) / neighborhood_counts.sum()
 
             # compute the KL divergence between the two distributions
             divergence = scipy.stats.entropy(parcel_distribution, neighborhood_distribution)

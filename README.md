@@ -16,6 +16,19 @@ If you make use of this implementation in your own project or want to refer to i
 }
 ```
 
+
+## Changelog
+
+- **7/30/2021**
+  - Added a dataloader for Sentinel 2 imagery based on the [Planetary Computer](https://planetarycomputer.microsoft.com/)
+  - Added notebook demonstrating the new dataloader
+  - Fixed bug in `algorithms.calculate_change_values` (if there were empty clusters then KL divergence value could be 'inf')
+
+
+## Example figure
+
+(A and B) Examples of two poultry barn footprints over 5 years of NAIP imagery. We observe inter-year variability of NAIP imagery and the change in the relation of color/texture between the footprint and neighborhood when a footprint is "developed". (C and D) Examples of two solar farm footprints over 5 years of Sentinel 2 imagery. Note, in A we outline the building footprint location in yellow through the entire series of imagery, but omit this outline in remaining rows.
+
 <p align="center">
     <img src="images/data_examples.png" width="800"/>
 </p>
