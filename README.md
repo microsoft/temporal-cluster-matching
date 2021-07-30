@@ -4,7 +4,7 @@
 
 This repo contains an implementation of the Temporal Cluster Matching (TCM) algorithm and several baselines from the paper ["Temporal Cluster Matching for Change Detection of Structures from Satellite Imagery"](https://arxiv.org/abs/2103.09787). The Temporal Cluster Matching algorithm attempts to determine when a structure was constructed given that structure's footprint at a known point in time, as well as a time series of remotely sensed imagery leading up to that point in time. In the accompanying paper we use this algorithm with a dataset of _poultry barn footprints_ from the Delmarva Peninsula in the US and dataset of _solar farms footprints_ over the Indian state of Karnataka.
 
-For a quick overview of the functionality implemented in this repo, see [notebooks/Basic library function demos.ipynb](notebooks/Basic library function demos.ipynb).
+For a quick overview of the functionality implemented in this repo, see [notebooks/Basic library function demos.ipynb](notebooks/Basic%20library%20function%20demos.ipynb).
 
 If you make use of this implementation in your own project or want to refer to it in a scientific publication, **please consider referencing this GitHub repository and citing our [paper](https://arxiv.org/pdf/2103.09787.pdf)**:
 ```
