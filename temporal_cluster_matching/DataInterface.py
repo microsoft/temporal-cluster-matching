@@ -3,6 +3,7 @@ Copyright (c) Microsoft Corporation. All rights reserved.
 Licensed under the MIT License.
 '''
 import abc
+from functools import lru_cache
 
 import numpy as np
 
@@ -10,8 +11,15 @@ from skimage.segmentation import mark_boundaries
 
 import rasterio
 import rasterio.mask
+import rasterio.features
+import rasterio.windows
+import rasterio.warp
+
 import shapely
 import shapely.geometry
+
+from pystac_client import Client
+import planetary_computer as pc
 
 from . import utils
 
@@ -304,3 +312,93 @@ class S2DataLoader(AbstractDataLoader):
             image = utils.scale(1.1*image, 0, 2500)
             rgb_images.append(image)
         return rgb_images
+
+
+################################################################
+################################################################
+
+
+class PlanetaryComputerS2DataLoader(AbstractDataLoader):
+
+    def __init__(self, geoms, pc_subscription_key, search_start="2015-01-01", search_end="2019-12-31"):
+        pc.settings.set_subscription_key(pc_subscription_key)
+        self.geoms = geoms
+        self.time_range = f"{search_start}/{search_end}"
+
+    @lru_cache(maxsize=None)
+    def query_geom(self, geom_idx):
+        geom = self.geoms[geom_idx]
+        catalog = Client.open("https://planetarycomputer.microsoft.com/api/stac/v1")
+
+        search = catalog.search(
+            collections=["sentinel-2-l2a"],
+            intersects=geom,
+            datetime=self.time_range,
+            query={"eo:cloud_cover": {"lt": 10}},
+        )
+
+        items = list(search.get_items())
+        return items[::-1]
+
+    def get_dates_from_geom(self, geom_idx):
+        items = self.query_geom(geom_idx)
+        dates = []
+        for item in items:
+            dates.append(item.datetime.strftime("%m-%d-%Y"))
+        return dates
+
+    def get_rgb_stack_from_geom(self, geom_idx, buffer, show_outline=True):
+
+        images, masks, dates = self.get_data_stack_from_geom(geom_idx, buffer)
+        if show_outline:
+            new_images = []
+            for image, mask in zip(images, masks):
+                new_images.append(mark_boundaries(
+                    image, mask
+                ))
+            return new_images, dates
+        else:
+            return images, dates
+
+    @lru_cache(maxsize=None)
+    def get_data_stack_from_geom(self, geom_idx, buffer):
+        geom = self.geoms[geom_idx]
+
+        items = self.query_geom(geom_idx)
+        dates = self.get_dates_from_geom(geom_idx)
+
+        crss = set()
+        for item in items:
+            crss.add(item.properties["proj:epsg"])
+        assert len(crss) == 1
+        dst_crs = "epsg:" + str(list(crss)[0])
+
+        geom = rasterio.warp.transform_geom("epsg:4326", dst_crs, geom)
+        mask_geom, bounding_geom = get_mask_and_bounding_geoms(geom, buffer)
+
+        images = []
+        masks = []
+        for item in items:
+
+            href = item.assets["visual-10m"].href
+            signed_href = pc.sign(href)
+
+            with rasterio.Env(**RASTERIO_BEST_PRACTICES):
+                with rasterio.open(signed_href) as f:
+
+                    mask_image, _ = rasterio.mask.mask(f, [mask_geom], crop=True, invert=False, pad=False, all_touched=True)
+                    mask_image = np.rollaxis(mask_image, 0, 3)
+
+                    full_image, _ = rasterio.mask.mask(f, [bounding_geom], crop=True, invert=False, pad=False, all_touched=True)
+                    full_image = np.rollaxis(full_image, 0, 3)
+
+                    mask = np.zeros((mask_image.shape[0], mask_image.shape[1]), dtype=np.uint8)
+                    mask[np.sum(mask_image == 0, axis=2) != 3] = 1
+
+            images.append(full_image)
+            masks.append(mask)
+
+        return images, masks, dates
+
+    def data_stack_to_rgb(self, images):
+        raise NotImplementedError("This method is unecessary as the data is already RGB")

@@ -21,6 +21,14 @@ If you make use of this implementation in your own project or want to refer to i
 </p>
 
 
+## Changelog
+
+- 7/30/2021
+  - Added a dataloader for Sentinel 2 imagery based on the [Planetary Computer](https://planetarycomputer.microsoft.com/)
+  - Added notebook demonstrating the new dataloader
+  - Fixed bug in `algorithms.calculate_change_values` (if there were empty clusters then KL divergence value could be 'inf')
+
+
 ## Setup
 
 First, run the following commands to create a conda environment, `tcm`, with the necessary dependencies for running the scripts and notebooks in this repository.

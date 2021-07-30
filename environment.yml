@@ -1,6 +1,4 @@
 name: tcm
-channels:
-  - conda-forge
 dependencies:
   - python
   - pip
@@ -20,3 +18,5 @@ dependencies:
     - utm
     - pigeon-jupyter==0.1.0
     - planetary-computer>=0.3.0rc3
+    - pygifsicle
+    - imageio
