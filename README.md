@@ -16,17 +16,18 @@ If you make use of this implementation in your own project or want to refer to i
 }
 ```
 
-<p align="center">
-    <img src="images/data_examples.png" width="800"/>
-</p>
-
 
 ## Changelog
 
-- 7/30/2021
+- **7/30/2021**
   - Added a dataloader for Sentinel 2 imagery based on the [Planetary Computer](https://planetarycomputer.microsoft.com/)
   - Added notebook demonstrating the new dataloader
   - Fixed bug in `algorithms.calculate_change_values` (if there were empty clusters then KL divergence value could be 'inf')
+
+
+<p align="center">
+    <img src="images/data_examples.png" width="800"/>
+</p>
 
 
 ## Setup
