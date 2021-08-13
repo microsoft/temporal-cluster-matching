@@ -380,7 +380,7 @@ class PlanetaryComputerS2DataLoader(AbstractDataLoader):
         masks = []
         for item in items:
 
-            href = item.assets["visual-10m"].href
+            href = item.assets["visual"].href
             signed_href = pc.sign(href)
 
             with rasterio.Env(**RASTERIO_BEST_PRACTICES):
