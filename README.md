@@ -20,9 +20,10 @@ If you make use of this implementation in your own project or want to refer to i
 ## Changelog
 
 - **7/30/2021**
-  - Added a dataloader for Sentinel 2 imagery based on the [Planetary Computer](https://planetarycomputer.microsoft.com/)
-  - Added notebook demonstrating the new dataloader
-  - Fixed bug in `algorithms.calculate_change_values` (if there were empty clusters then KL divergence value could be 'inf')
+  - Added a dataloader for Sentinel 2 imagery based on the [Planetary Computer](https://planetarycomputer.microsoft.com/).
+  - Added a notebook for demonstrating the new dataloader. This notebook downloads the time series of non-cloudy Sentinel 2 scenes for an input geometry and allows, for example, more precise change dates to be calculated.
+    <img src="images/sentinel2_demo.gif"/>
+  - Fixed a bug in `algorithms.calculate_change_values` (if there were empty clusters then KL divergence value could be 'inf').
 
 
 ## Example figure
