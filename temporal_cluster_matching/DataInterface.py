@@ -14,6 +14,7 @@ import rasterio.mask
 import rasterio.features
 import rasterio.windows
 import rasterio.warp
+import fiona.transform
 
 import shapely
 import shapely.geometry
@@ -60,13 +61,14 @@ class AbstractDataLoader(abc.ABC):
     '''
 
     @abc.abstractmethod
-    def get_rgb_stack_from_geom(self, geom, buffer, show_outline=True):
+    def get_rgb_stack_from_geom(self, geom, buffer, show_outline=True, geom_crs="epsg:4326"):
         """Returns a time-series stack of RGB image patches corresponding to a query geometry (that optionally show the outline of the query geometry).
 
         Args:
             geom: A polygon in GeoJSON format describing the query footprint.
             buffer: An amount (in units of imagery's projection) to buffer the geom by.
             show_outline: A flag that indicates whether the RGB image patches should be rendered with the outline of `geom`.
+            geom_crs: The coordinate reference system (CRS) of geom
 
         Returns:
             rgb_images: A list of RGB image patches (with `np.uint8` dtypes), one for each date in the source time-series. Each patch should be a crop that covers the extent of the `geom` buffered by an amount specified by `buffer`.
@@ -75,13 +77,15 @@ class AbstractDataLoader(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_data_stack_from_geom(self, geom, buffer):
+    def get_data_stack_from_geom(self, geom, buffer, geom_crs="epsg:4326"):
         """Returns a time-series stack of data images corresponding to a query geometry. While `get_rgb_stack_from_geom(.)` returns just the RGB component of the imagery, this method should return
         the bands to be included in processing.
 
         Args:
             geom: A polygon in GeoJSON format describing the query footprint.
             buffer: An amount (in units of imagery's projection) to buffer the geom by.
+            geom_crs: The coordinate reference system (CRS) of geom
+
         Returns:
             images: A list of image patches (with a `dtype` matching the source time-series), one for each date in the source time-series. Each patch should be a crop that covers the extent of the `geom` buffered by an amount specified by `buffer`.
             masks: A list of masks for each patch in `images`. These should be binary, contain a 1 where the corresponding image is covered by the `geom`, and contain a 0 elsewhere.
@@ -97,17 +101,20 @@ class AbstractDataLoader(abc.ABC):
 
         Args:
             images: The list of image patches that are returned by `get_data_stack_from_geom(.)`.
+
         Returns:
             rgb_images: A list of RGB image patches (with `np.uint8` dtypes), one for each patch in `images`. These should be processed in the same way that `get_rgb_stack_from_geom(.)` processes the source imagery.
         """
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_dates_from_geom(self, geom):
+    def get_dates_from_geom(self, geom, geom_crs="epsg:4326"):
         """A convenience method for determining what dates of data are available for a given geometry.
 
         Args:
             geom: A polygon in GeoJSON format describing the query footprint.
+            geom_crs: The coordinate reference system (CRS) of geom
+
         Returns:
             dates: A list of dates for which there is corresponding data for `geom`.
         """
@@ -121,9 +128,8 @@ class NAIPDataLoader(AbstractDataLoader):
     def __init__(self):
         self.index = utils.NAIPTileIndex()
 
-    def _get_fns_from_geom(self, geom):
-
-        centroid = utils.get_transformed_centroid_from_geom(geom, src_crs='epsg:26918', dst_crs='epsg:4326')
+    def _get_fns_from_geom(self, geom, src_crs):
+        centroid = utils.get_transformed_centroid_from_geom(geom, src_crs=src_crs, dst_crs='epsg:4326')
         fns = self.index.lookup_tile(*centroid)
         fns = sorted(fns)
 
@@ -152,8 +158,8 @@ class NAIPDataLoader(AbstractDataLoader):
 
         return valid_fns
 
-    def get_dates_from_geom(self, geom):
-        fns = self._get_fns_from_geom(geom)
+    def get_dates_from_geom(self, geom, geom_crs="epsg:26918"):
+        fns = self._get_fns_from_geom(geom, geom_crs)
 
         years = []
         for fn in fns:
@@ -161,24 +167,28 @@ class NAIPDataLoader(AbstractDataLoader):
             years.append(year)
         return years
 
-    def get_rgb_stack_from_geom(self, geom, buffer, show_outline=True):
+    def get_rgb_stack_from_geom(self, geom, buffer, show_outline=True, geom_crs="epsg:26918"):
 
         mask_geom, bounding_geom = get_mask_and_bounding_geoms(geom, buffer)
-        fns = self._get_fns_from_geom(geom)
+        fns = self._get_fns_from_geom(geom, geom_crs)
 
         years = []
         images = []
         for fn in fns:
-
             year = int(fn.split("/")[2])
             years.append(year)
 
             with rasterio.Env(**RASTERIO_BEST_PRACTICES):
                 with rasterio.open(utils.NAIP_BLOB_ROOT + fn) as f:
-                    mask_image, _ = rasterio.mask.mask(f, [mask_geom], crop=True, invert=False, pad=False, all_touched=True)
+                    dst_crs = f.crs.to_string()
+                    if geom_crs != dst_crs:
+                        t_mask_geom = fiona.transform.transform_geom(geom_crs, dst_crs, mask_geom)
+                        t_bounding_geom = fiona.transform.transform_geom(geom_crs, dst_crs, bounding_geom)
+
+                    mask_image, _ = rasterio.mask.mask(f, [t_mask_geom], crop=True, invert=False, pad=False, all_touched=True)
                     mask_image = np.rollaxis(mask_image, 0, 3)
 
-                    full_image, _ = rasterio.mask.mask(f, [bounding_geom], crop=True, invert=False, pad=False, all_touched=True)
+                    full_image, _ = rasterio.mask.mask(f, [t_bounding_geom], crop=True, invert=False, pad=False, all_touched=True)
                     full_image = np.rollaxis(full_image, 0, 3)[:,:,:3]
 
                     mask = np.zeros((mask_image.shape[0], mask_image.shape[1]), dtype=np.uint8)
@@ -193,10 +203,10 @@ class NAIPDataLoader(AbstractDataLoader):
 
         return images, years
 
-    def get_data_stack_from_geom(self, geom, buffer):
+    def get_data_stack_from_geom(self, geom, buffer, geom_crs="epsg:26918"):
 
         mask_geom, bounding_geom = get_mask_and_bounding_geoms(geom, buffer)
-        fns = self._get_fns_from_geom(geom)
+        fns = self._get_fns_from_geom(geom, geom_crs)
 
         years = []
         images = []
@@ -247,7 +257,7 @@ class S2DataLoader(AbstractDataLoader):
     def get_dates_from_geom(self, geom):
         return list(S2DataLoader.years)
 
-    def get_rgb_stack_from_geom(self, geom, buffer, show_outline=True):
+    def get_rgb_stack_from_geom(self, geom, buffer, show_outline=True, geom_crs="epsg:4326"):
 
         mask_geom, bounding_geom = get_mask_and_bounding_geoms(geom, buffer)
 
@@ -278,7 +288,7 @@ class S2DataLoader(AbstractDataLoader):
 
         return images, years
 
-    def get_data_stack_from_geom(self, geom, buffer):
+    def get_data_stack_from_geom(self, geom, buffer, geom_crs="epsg:4326"):
 
         mask_geom, bounding_geom = get_mask_and_bounding_geoms(geom, buffer)
 
@@ -347,9 +357,9 @@ class PlanetaryComputerS2DataLoader(AbstractDataLoader):
             dates.append(item.datetime.strftime("%m-%d-%Y"))
         return dates
 
-    def get_rgb_stack_from_geom(self, geom_idx, buffer, show_outline=True):
+    def get_rgb_stack_from_geom(self, geom_idx, buffer, show_outline=True, geom_crs="epsg:4326"):
 
-        images, masks, dates = self.get_data_stack_from_geom(geom_idx, buffer)
+        images, masks, dates = self.get_data_stack_from_geom(geom_idx, buffer, geom_crs)
         if show_outline:
             new_images = []
             for image, mask in zip(images, masks):
@@ -361,7 +371,7 @@ class PlanetaryComputerS2DataLoader(AbstractDataLoader):
             return images, dates
 
     @lru_cache(maxsize=None)
-    def get_data_stack_from_geom(self, geom_idx, buffer):
+    def get_data_stack_from_geom(self, geom_idx, buffer, geom_crs="epsg:4326"):
         geom = self.geoms[geom_idx]
 
         items = self.query_geom(geom_idx)
@@ -373,7 +383,7 @@ class PlanetaryComputerS2DataLoader(AbstractDataLoader):
         assert len(crss) == 1
         dst_crs = "epsg:" + str(list(crss)[0])
 
-        geom = rasterio.warp.transform_geom("epsg:4326", dst_crs, geom)
+        geom = rasterio.warp.transform_geom(geom_crs, dst_crs, geom)
         mask_geom, bounding_geom = get_mask_and_bounding_geoms(geom, buffer)
 
         images = []
